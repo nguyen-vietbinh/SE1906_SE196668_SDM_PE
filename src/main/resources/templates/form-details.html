@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>View Device Details</title>
+    <link th:href="@{/bootstrap.css}" rel="stylesheet"/>
+    <link th:href="@{/style.css}" rel="stylesheet"/>
+</head>
+<body>
+<div class="container-fluid border">
+
+    <div th:fragment="header" class="page-header">
+        <h1 class="text-start">View Device Details</h1>
+    </div>
+
+    </div>
+
+    <div class="container">
+        <div class="form-section">
+            <p style=" font-weight:bold; color: #0f5132" th:if="${successMessage}" th:text="${successMessage}"></p>
+            <p style=" font-weight:bold; color: red" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+            <form method="get" class="px-5" th:object="${deviceDetail}">
+                <div class="row mb-4 align-items-center">
+
+                    <span class="col-2 fs-5 text-end">Device Code:</span>
+                    <span class="col-3">
+                        <input readonly type="text" class="form-control rounded-1 " th:field="*{deviceCode}">
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('deviceCode')}" th:errors="*{deviceCode}"></span>
+
+                    <span class="col-2 fs-5 text-end">Category:</span>
+                    <span class="col-3 ">
+                       <select disabled class="form-select rounded-1" th:field="*{categoryId}" >
+                           <option th:each=" cate : ${cateList}"
+                                   th:value="${cate.key}"
+                                   th:text="${cate.value}">
+                           </option>
+
+                       </select>
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}"></span>
+
+                </div>
+
+                <div class="row mb-4 align-items-center ">
+
+                    <span class="col-2 fs-5 text-end">Device Name:</span>
+                    <span class="col-3 ">
+                        <input readonly type="text" class="form-control rounded-1" th:field="*{deviceName}">
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('deviceName')}" th:errors="*{deviceName}"></span>
+
+                    <span class="col-2 fs-5 text-end text-nowrap">Price($):</span>
+                    <span class="col-3 ">
+                        <input readonly type="text" class="form-control rounded-1" th:field="*{price}">
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('price')}" th:errors="*{price}"></span>
+
+                </div>
+
+                <div class="row mb-4 align-items-center ">
+
+                    <span class="col-2 fs-5 text-end">Warranty (months):</span>
+                    <span class="col-3">
+                        <input readonly type="text" class="form-control rounded-1" th:field="*{warrantyMonths}">
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('warrantyMonths')}" th:errors="*{warrantyMonths}"></span>
+
+                    <span class="col-2 fs-5 text-end">Installation Date (dd/MM/yyyy):</span>
+                    <span class="col-3 ">
+                        <input readonly type="text" class="form-control rounded-1" th:field="*{installationDate}">
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('installationDate')}" th:errors="*{installationDate}"></span>
+
+
+                </div>
+
+                <div class="row mb-4 align-items-center ">
+
+                    <span class="col-2 fs-5 text-end">Status:</span>
+
+                    <span class="col-3 ">
+                       <select disabled class="form-select rounded-1" th:field="*{status}" >
+                           <option th:each=" status : ${statusList}"
+                                   th:value="${status.key}"
+                                   th:text="${status.value}">
+                           </option>
+
+                       </select>
+                    </span>
+                    <span style="color: red" th:if="${#fields.hasErrors('status')}" th:errors="*{status}"></span>
+
+                    <span class="col-11 m-0 text-end">
+                    (
+                        <span th:each="status, iterStat : ${statusList}"
+                              th:text="${status.key} + '-' + ${status.value} + ${!iterStat.last ? ', ' : ''}">
+                        </span>
+                    )
+                    </span>
+
+                </div>
+
+                <div class="row ">
+                    <div class="col-3 text-end">
+                        <input type="submit"  value="Save"
+                               style="padding: 6px 30px; font-size: 16px; background-color: #efefef; border: 1px solid #767676; cursor: pointer;">
+                    </div>
+                    <div class="col-4 text-end">
+                        <button type="button" th:onclick="|window.location.href='@{/}'|"  value="back"
+                                style="padding: 6px 30px; font-size: 16px; background-color: #efefef; border: 1px solid #767676; cursor: pointer;"
+                        >Back</button>
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Device Management</title>
+    <link th:href="@{/bootstrap.css}" rel="stylesheet">
+    <link th:href="@{/style.css}" rel="stylesheet">
+    <script th:src="@{/bootstrap.bundle.js}"></script>
+
+</head>
+<body>
+
+<div class="container-fluid border">
+
+    <div th:fragment="header" class="page-header">
+        <h1 class="text-start">Smart Device Management</h1>
+    </div>
+
+    <div class="form-section">
+
+        <p style=" font-weight:bold; color: #0f5132" th:if="${successMessage}" th:text="${successMessage}"></p>
+        <p style=" font-weight:bold; color: red" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+        <form class="d-flex justify-content-center align-items-center gap-2" th:action="@{/search}" method="GET">
+            <label for="deviceName">Device Name:</label>
+            <input type="text" id="deviceName" name="deviceName" th:value="${deviceName}"  class="form-control w-25">
+            <button  type="submit">Search</button>
+            <button type="button"  th:onclick="|window.location.href='@{/add}'|">Add new</button>
+        </form>
+    </div>
+    <div class="form-section">
+        <table class="table table-bordered">
+            <thead class="table-primary text-center">
+            <tr >
+                <th>Code</th>
+                <th>Device Name</th>
+                <th>Category</th>
+                <th>Price($)</th>
+                <th>Installation Date</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody class="text-center">
+            <th:block th:each="device, stat : ${devices}">
+
+                <tr>
+                    <td th:text="${device.getDeviceCode()}"></td>
+                    <td th:text="${device.getDeviceName()}"></td>
+                    <td th:text="${cateList.get(device.getCategoryId())}"></td>
+                    <td th:text="${device.getPrice().longValue()}"></td>
+                    <td th:text="${device.getInstallationDate()}"></td>
+                    <td th:text="${statusList.get(device.getStatus())}"></td>
+
+                    <td>
+
+                        <a href="#"
+                           data-bs-toggle="modal"
+                           th:data-bs-target="${'#confirmModal' + device.getId()}"
+                           style="color: black; text-decoration: underline; cursor: pointer;">Delete</a> |
+                        <a th:href="@{/detail/{id}(id=${device.getId()})}" style="color: black; text-decoration: underline" >View</a>
+
+
+                    </td>
+                </tr>
+
+                <div class="modal fade" th:id="${'confirmModal' + device.getId()}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirm Delete</h5>
+                            </div>
+                            <div class="modal-body">
+                                Are you sure delete <b th:text="${device.getDeviceName()}"></b>?
+                            </div>
+                            <div class="modal-footer justify-content-around">
+                                <button  data-bs-dismiss="modal" style="padding: 4px 35px 4px 10px" >
+                                    No
+                                </button>
+
+                                <a th:href="@{/delete/{id}(id=${device.getId()})}" style="background-color: #efefef; border: 2px solid black; color: black; text-decoration: none; padding: 4px 35px 4px 10px; display: inline-block;">
+                                    Yes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </th:block>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
