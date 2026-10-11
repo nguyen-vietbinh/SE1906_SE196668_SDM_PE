@@ -1,5 +1,3 @@
-USE [HSF302_2026_PE_SDM]
-
 
 -- Drop tables if exists (to avoid conflict)
 IF OBJECT_ID('dbo.devices', 'U') IS NOT NULL DROP TABLE [dbo].[devices];

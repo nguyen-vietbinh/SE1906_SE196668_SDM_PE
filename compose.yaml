@@ -1,0 +1,81 @@
+#services:
+#  app:
+#    image: test2
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+#      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+#      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#    networks:
+#        - test-network
+#    restart: unless-stopped
+#
+#  mysql:
+#    image: mysql:8.4
+#    environment:
+#        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+#        MYSQL_DATABASE: ${MYSQL_DATABASE}
+#        MYSQL_USER: ${MYSQL_USER}
+#        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+#    ports:
+#      - "127.0.0.1:3307:3306"
+#    volumes:
+#      - mysql_data:/var/lib/mysql
+#    healthcheck:
+#      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}", "--silent"]
+#      interval: 5s
+#      timeout: 3s
+#      retries: 20
+#      start_period: 30s
+#    networks:
+#        - test-network
+#    restart: unless-stopped
+#
+#volumes:
+#    mysql_data:
+#
+#networks:
+#    test-network:
+#      driver: bridge
+
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=HSF302_2026_PE_SDM;encrypt=true;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: "sa"
+      SPRING_DATASOURCE_PASSWORD: "BinhPassword123"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: on-failure
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "BinhPassword123"
+    ports:
+      - "127.0.0.1:1434:1433"
+    volumes:
+      - fresh_mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'BinhPassword123' -Q 'IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = \"HSF302_2026_PE_SDM\") CREATE DATABASE [HSF302_2026_PE_SDM]; SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  fresh_mssql_data:
