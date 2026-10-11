@@ -33,7 +33,7 @@ public class DeviceServiceImplTest {
                 deviceService.statusList();
 
         assertEquals(3, result.size());
-        assertEquals("Wrong Status", result.get("AC"));
+        assertEquals("Active", result.get("AC"));
         assertEquals("Inactive", result.get("IN"));
         assertEquals("Draft", result.get("DR"));
     }
