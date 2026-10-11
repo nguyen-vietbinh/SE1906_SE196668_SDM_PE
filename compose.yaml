@@ -43,6 +43,7 @@
 #      driver: bridge
 
 
+
 services:
   app:
     build:
@@ -51,31 +52,26 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=HSF302_2026_PE_SDM;encrypt=true;trustServerCertificate=true"
-      SPRING_DATASOURCE_USERNAME: "sa"
-      SPRING_DATASOURCE_PASSWORD: "BinhPassword123"
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=${MSSQL_DATABASE};encrypt=true;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
     depends_on:
       sqlserver:
         condition: service_healthy
-    restart: on-failure
+    restart: unless-stopped
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_PID: "Developer"
-      MSSQL_SA_PASSWORD: "BinhPassword123"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
     ports:
       - "127.0.0.1:1434:1433"
     volumes:
       - fresh_mssql_data:/var/opt/mssql
-    healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'BinhPassword123' -Q 'IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = \"HSF302_2026_PE_SDM\") CREATE DATABASE [HSF302_2026_PE_SDM]; SELECT 1'"]
-      interval: 5s
-      timeout: 5s
-      retries: 15
-      start_period: 15s
     restart: unless-stopped
 
 volumes:
   fresh_mssql_data:
+
