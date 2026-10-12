@@ -1,18 +1,11 @@
-# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Backend CI
+name: Backend CI/CD
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
   workflow_dispatch:
 
 permissions:
@@ -24,27 +17,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Download source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Java
       - name: Set Java
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           cache: maven
 
-      # 3. Build and test the application
       - name: Build with Maven
         run: mvn --batch-mode clean verify
 
-      # 4. Prepare docker build environment
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 5. Generate image metadata
       - name: Generate Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -54,7 +42,6 @@ jobs:
             type=sha,format=short
             type=ref,event=branch
 
-      # 6. Login to GitHub Container Registry
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -63,7 +50,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 7. Build Docker image and publish
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -71,3 +57,78 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    name: Deploy to EC2 via SSM
+    needs: build-and-publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::505384437704:role/GitHubActions-EC2-Deploy-Role
+          aws-region: ap-southeast-1
+
+      - name: Deploy application through SSM
+        env:
+          EC2_INSTANCE_ID: i-06cb6dad59b1b1c6d
+          AWS_REGION: ap-southeast-1
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_TAG="sha-${GITHUB_SHA:0:7}"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$(jq -n --arg tag "$IMAGE_TAG" '{
+              commands: [
+                "set -e",
+                ("APP_IMAGE_TAG=" + $tag + " docker compose --project-directory /home/ubuntu/swp-deployment --env-file /home/ubuntu/swp-deployment/.env -f /home/ubuntu/swp-deployment/docker-compose.yml pull app"),
+                ("APP_IMAGE_TAG=" + $tag + " docker compose --project-directory /home/ubuntu/swp-deployment --env-file /home/ubuntu/swp-deployment/.env -f /home/ubuntu/swp-deployment/docker-compose.yml up -d --no-deps app")
+              ]
+            }')" \
+            --query 'Command.CommandId' \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          for attempt in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --region "$AWS_REGION" \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$EC2_INSTANCE_ID" \
+              --query 'Status' \
+              --output text 2>/dev/null || true)
+
+            echo "Deployment status: ${STATUS:-Pending}"
+
+            case "$STATUS" in
+              Success)
+                echo "Deployment completed successfully."
+                exit 0
+                ;;
+              Failed|Cancelled|TimedOut)
+                aws ssm get-command-invocation \
+                  --region "$AWS_REGION" \
+                  --command-id "$COMMAND_ID" \
+                  --instance-id "$EC2_INSTANCE_ID" \
+                  --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
+                  --output json || true
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          echo "Timed out waiting for deployment command."
+          exit 1

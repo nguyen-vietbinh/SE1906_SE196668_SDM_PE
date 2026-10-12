@@ -45,21 +45,6 @@
 
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=${MSSQL_DATABASE};encrypt=true;trustServerCertificate=true"
-      SPRING_DATASOURCE_USERNAME: sa
-      SPRING_DATASOURCE_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
-    depends_on:
-      sqlserver:
-        condition: service_healthy
-    restart: unless-stopped
-
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -70,6 +55,39 @@ services:
       - "127.0.0.1:1434:1433"
     volumes:
       - fresh_mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    user: root
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        echo "Creating database if not exists..."
+        /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'HSF302_2026_PE_SDM') BEGIN CREATE DATABASE [HSF302_2026_PE_SDM]; END"
+    restart: "no"
+
+  app:
+    image: ghcr.io/nguyen-vietbinh/se1906_se196668_sdm_pe:sha-c4791bb
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=HSF302_2026_PE_SDM;encrypt=true;trustServerCertificate=true"
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ${MSSQL_SA_PASSWORD}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
 volumes:
